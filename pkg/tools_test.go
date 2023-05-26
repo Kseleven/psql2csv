@@ -1,11 +1,12 @@
-package csv
+package pkg
 
 import (
 	"errors"
-	"github.com/stretchr/testify/assert"
 	"net/netip"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestColumnDiff(t *testing.T) {

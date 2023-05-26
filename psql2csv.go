@@ -3,8 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	csv "github.com/Kseleven/psql2csv"
 	"os"
+
+	"github.com/Kseleven/psql2csv/pkg"
 )
 
 var (
@@ -26,18 +27,18 @@ func main() {
 		catchError(fmt.Errorf("config path is empty"))
 	}
 
-	conf, err := csv.LoadConfig(ConfigFile)
+	conf, err := pkg.LoadConfig(ConfigFile)
 	catchError(err)
 	catchError(conf.Valid())
 
 	conf.DBPassword = DBPwd
-	db, err := csv.NewDB(conf)
+	db, err := pkg.NewDB(conf)
 	catchError(err)
 
 	if conf.ImportAction() {
-		catchError(csv.ImportCsv2DB(db, conf))
+		catchError(pkg.ImportCsv2DB(db, conf))
 	} else {
-		catchError(csv.Export2Csv(db, conf))
+		catchError(pkg.Export2Csv(db, conf))
 	}
 
 	fmt.Println("done")
