@@ -1,0 +1,6 @@
+.DS_Store
+.idea/
+data/
+import_test.go
+export_test.go
+examples/pg2csv.json

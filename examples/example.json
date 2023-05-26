@@ -1,0 +1,18 @@
+{
+  "dbHost": "127.0.0.1",
+  "dbName": "test",
+  "dbUser": "cooker",
+  "dbPort": 5432,
+  "action": "import",
+  "exportTable": {
+    "exportPath" : "./",
+    "tables": ["tb_people", "tb_address" ]
+  },
+  "importTable": {
+    "importPath": "./",
+    "tables":[
+      {"tableName": "tb_people", "fileName":"tb_people.csv"},
+      {"tableName": "tb_address", "fileName":"tb_address.csv"}
+    ]
+  }
+}
