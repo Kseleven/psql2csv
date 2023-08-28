@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -60,6 +61,7 @@ func (t *ImportTable) importOneCsv2DB(tx pgx.Tx) error {
 	if err != nil {
 		return fmt.Errorf("open file of %s failed:%s", t.TableName, err.Error())
 	}
+	defer f.Close()
 
 	records, err := csv.NewReader(f).ReadAll()
 	if err != nil {
@@ -70,8 +72,14 @@ func (t *ImportTable) importOneCsv2DB(tx pgx.Tx) error {
 	}
 
 	placeHolders := make([]string, 0, len(records[0]))
+	ignoreMap := make(map[int]any, len(t.IgnoreColumns))
 	for i := range t.Header {
 		placeHolders = append(placeHolders, "$"+strconv.Itoa(i+1))
+		for _, column := range t.IgnoreColumns {
+			if column.Header == t.Header[i] {
+				ignoreMap[i] = column.Value
+			}
+		}
 	}
 	var buf bytes.Buffer
 	buf.WriteString("INSERT INTO ")
@@ -86,7 +94,11 @@ func (t *ImportTable) importOneCsv2DB(tx pgx.Tx) error {
 	br := &pgx.Batch{}
 	for _, record := range records[1:] {
 		vs := make([]any, 0, len(record))
-		for _, s := range record {
+		for i, s := range record {
+			if v, ok := ignoreMap[i]; ok && reflect.DeepEqual(v, s) {
+				continue
+			}
+
 			var slice []string
 			if err := json.Unmarshal([]byte(s), &slice); err == nil {
 				s = "{" + strings.Join(slice, ",") + "}"
@@ -106,10 +118,16 @@ func (t *ImportTable) importOneCsv2DB(tx pgx.Tx) error {
 }
 
 type ImportTable struct {
-	TableName string `json:"tableName"`
-	FileName  string `json:"fileName"`
-	Header    []string
-	TargetFds []pgconn.FieldDescription
+	TableName     string         `json:"tableName"`
+	FileName      string         `json:"fileName"`
+	IgnoreColumns []IgnoreColumn `json:"ignore_columns"`
+	Header        []string
+	TargetFds     []pgconn.FieldDescription
+}
+
+type IgnoreColumn struct {
+	Header string `json:"header"`
+	Value  any    `json:"value"`
 }
 
 func (t *ImportTable) String() string {
@@ -125,6 +143,8 @@ func (t *ImportTable) checkTableHeader(conn *pgx.Conn) error {
 	if err != nil {
 		return err
 	}
+	defer f.Close()
+
 	header, err := csv.NewReader(f).Read()
 	if err != nil {
 		return err
@@ -145,7 +165,7 @@ func (t *ImportTable) checkTableHeader(conn *pgx.Conn) error {
 	}
 
 	if err := columnDiff(header, targetHeader); err != nil {
-		return err
+		return fmt.Errorf("header:%v target:%v err:%s", header, targetHeader, err.Error())
 	}
 
 	t.Header = header

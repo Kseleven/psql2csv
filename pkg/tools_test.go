@@ -22,6 +22,12 @@ func TestColumnDiff(t *testing.T) {
 			expect:  nil,
 		},
 		{
+			name:    "same1",
+			column1: []string{"id", "create_time", "name", "parent_id", "depth", "path_ids", "read_only", "index", "brief_name", "unique_code", "comment"},
+			column2: []string{"id", "create_time", "name", "brief_name", "unique_code", "comment", "parent_id", "depth", "path_ids", "read_only", "index"},
+			expect:  nil,
+		},
+		{
 			name:    "missing column",
 			column1: []string{"name", "address", "age"},
 			column2: []string{"name", "address", "age", "country"},
