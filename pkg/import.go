@@ -94,9 +94,11 @@ func (t *ImportTable) importOneCsv2DB(tx pgx.Tx) error {
 	br := &pgx.Batch{}
 	for _, record := range records[1:] {
 		vs := make([]any, 0, len(record))
+		ignore := false
 		for i, s := range record {
 			if v, ok := ignoreMap[i]; ok && reflect.DeepEqual(v, s) {
-				continue
+				ignore = true
+				break
 			}
 
 			var slice []string
@@ -106,6 +108,9 @@ func (t *ImportTable) importOneCsv2DB(tx pgx.Tx) error {
 			} else {
 				vs = append(vs, s)
 			}
+		}
+		if ignore {
+			continue
 		}
 		br.Queue(buf.String(), vs...)
 	}
