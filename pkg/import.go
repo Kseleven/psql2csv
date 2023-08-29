@@ -72,15 +72,16 @@ func (t *ImportTable) importOneCsv2DB(tx pgx.Tx) error {
 	}
 
 	placeHolders := make([]string, 0, len(records[0]))
-	ignoreMap := make(map[int]any, len(t.IgnoreColumns))
+	ignoreMap := make(map[int][]any, len(t.IgnoreColumns))
 	for i := range t.Header {
 		placeHolders = append(placeHolders, "$"+strconv.Itoa(i+1))
 		for _, column := range t.IgnoreColumns {
 			if column.Header == t.Header[i] {
-				ignoreMap[i] = column.Value
+				ignoreMap[i] = append(ignoreMap[i], column.Value)
 			}
 		}
 	}
+
 	var buf bytes.Buffer
 	buf.WriteString("INSERT INTO ")
 	buf.WriteString(t.TableName)
@@ -96,7 +97,7 @@ func (t *ImportTable) importOneCsv2DB(tx pgx.Tx) error {
 		vs := make([]any, 0, len(record))
 		ignore := false
 		for i, s := range record {
-			if v, ok := ignoreMap[i]; ok && reflect.DeepEqual(v, s) {
+			if matchIgnoreColumn(ignoreMap, i, s) {
 				ignore = true
 				break
 			}
@@ -122,10 +123,21 @@ func (t *ImportTable) importOneCsv2DB(tx pgx.Tx) error {
 	return nil
 }
 
+func matchIgnoreColumn(ignoreMap map[int][]any, i int, s any) bool {
+	if vs, ok := ignoreMap[i]; ok {
+		for _, v := range vs {
+			if reflect.DeepEqual(v, s) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 type ImportTable struct {
 	TableName     string         `json:"tableName"`
 	FileName      string         `json:"fileName"`
-	IgnoreColumns []IgnoreColumn `json:"ignore_columns"`
+	IgnoreColumns []IgnoreColumn `json:"ignoreColumns"`
 	Header        []string
 	TargetFds     []pgconn.FieldDescription
 }

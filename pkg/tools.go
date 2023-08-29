@@ -3,6 +3,7 @@ package pkg
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/jackc/pgx/v5/pgtype"
 	"net/netip"
 	"reflect"
 	"strconv"
@@ -47,7 +48,21 @@ func valueToString(src any) string {
 			var buf strings.Builder
 			buf.WriteString("{")
 			for i := 0; i < v.Len(); i++ {
-				buf.WriteString(v.Index(i).Elem().String())
+				if v.Index(i).Elem().CanInterface() && v.Index(i).Elem().Type() == reflect.TypeOf(pgtype.Numeric{}) {
+					n, ok := v.Index(i).Elem().Interface().(pgtype.Numeric)
+					if ok {
+						if n.InfinityModifier == pgtype.Finite {
+							r, _ := n.Int64Value()
+							buf.WriteString(strconv.FormatInt(r.Int64, 10))
+						} else {
+							r, _ := n.Float64Value()
+							buf.WriteString(strconv.FormatFloat(r.Float64, 'E', -1, 64))
+						}
+					}
+				} else {
+					buf.WriteString(v.Index(i).Elem().String())
+				}
+
 				if i < v.Len()-1 {
 					buf.WriteString(",")
 				}
