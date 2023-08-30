@@ -59,6 +59,13 @@ func valueToString(src any) string {
 							buf.WriteString(strconv.FormatFloat(r.Float64, 'E', -1, 64))
 						}
 					}
+				} else if v.Index(i).Elem().CanInterface() && v.Index(i).Elem().Type() == reflect.TypeOf(netip.Prefix{}) {
+					n, ok := v.Index(i).Elem().Interface().(netip.Prefix)
+					if ok {
+						buf.WriteString(n.String())
+					} else {
+						buf.WriteString(v.Index(i).Elem().String())
+					}
 				} else {
 					buf.WriteString(v.Index(i).Elem().String())
 				}

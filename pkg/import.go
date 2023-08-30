@@ -6,6 +6,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"github.com/jackc/pgx/v5/pgtype"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -80,6 +81,7 @@ func (t *ImportTable) importOneCsv2DB(tx pgx.Tx) error {
 				ignoreMap[i] = append(ignoreMap[i], column.Value)
 			}
 		}
+
 	}
 
 	var buf bytes.Buffer
@@ -105,10 +107,13 @@ func (t *ImportTable) importOneCsv2DB(tx pgx.Tx) error {
 			var slice []string
 			if err := json.Unmarshal([]byte(s), &slice); err == nil {
 				s = "{" + strings.Join(slice, ",") + "}"
-				vs = append(vs, s)
-			} else {
-				vs = append(vs, s)
 			}
+			if fd := t.TargetFds[i]; s == "" &&
+				(fd.DataTypeOID == pgtype.InetArrayOID || fd.DataTypeOID == pgtype.TextArrayOID) {
+				s = "{}"
+			}
+
+			vs = append(vs, s)
 		}
 		if ignore {
 			continue
