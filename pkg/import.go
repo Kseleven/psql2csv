@@ -81,7 +81,6 @@ func (t *ImportTable) importOneCsv2DB(tx pgx.Tx) error {
 				ignoreMap[i] = append(ignoreMap[i], column.Value)
 			}
 		}
-
 	}
 
 	var buf bytes.Buffer
@@ -180,10 +179,18 @@ func (t *ImportTable) checkTableHeader(conn *pgx.Conn) error {
 		return err
 	}
 	defer rows.Close()
+
 	targetHeader := make([]string, 0, len(rows.FieldDescriptions()))
+	t.TargetFds = make([]pgconn.FieldDescription, len(rows.FieldDescriptions()))
 	for _, fd := range rows.FieldDescriptions() {
 		targetHeader = append(targetHeader, fd.Name)
-		t.TargetFds = append(t.TargetFds, fd)
+
+		for i, s := range header {
+			if s == fd.Name {
+				t.TargetFds[i] = fd
+				break
+			}
+		}
 	}
 
 	if err := columnDiff(header, targetHeader); err != nil {
